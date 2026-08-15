@@ -286,7 +286,7 @@ orbit_sizes = sorted([len(Orb) for Orb in orbits], reverse=True)
 print("orbit sizes =", orbit_sizes)
 
 
-# Step 6: print representatives.
+# Step 6:  print the complete orbit decomposition.
 
 orbits = sorted(orbits, key=len, reverse=True)
 
