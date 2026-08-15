@@ -1,0 +1,299 @@
+# fermat_sixers.py
+#
+# This script performs the finite combinatorial part of the Fermat experiment.
+#
+# Mathematical input:
+#   the Fermat cubic: x_0^3 + x_1^3 + x_2^3 + x_3^3 = 0
+#
+#   over a field containing the third roots of unity.
+#
+# Computational model:
+#   we carry out the incidence computation over F_7.  The field F_7 contains
+#   the three cube roots of unity
+#
+#       1, 2, 4.
+#
+#   This finite-field computation is used only to verify the incidence
+#   combinatorics of the standard Fermat lines.
+#
+# Output:
+#   - the 27 Fermat lines;
+#   - the skewness graph on these lines;
+#   - the 6-cliques of this graph, i.e. the sixers;
+#   - the induced action of Aut(S_F) = mu_3^3 semidirect S_4;
+#   - the orbit decomposition of the 72 sixers.
+
+
+from itertools import product, permutations, combinations
+
+p = 7
+roots = [1, 2, 4]
+
+# The 27 lines on the Fermat cubic are indexed by:
+#
+#   1. a partition of {0,1,2,3} into two unordered pairs;
+#   2. two cube roots a,b.
+#
+# If the partition is {{i,j},{k,ell}}, the corresponding line is
+#
+#       x_i + a x_j = 0,
+#       x_k + b x_ell = 0.
+#
+# There are 3 choices of partition and 3 choices for each of a,b,
+# giving 3*3*3 = 27 lines.
+
+pairings = [
+    ((0, 1), (2, 3)),
+    ((0, 2), (1, 3)),
+    ((0, 3), (1, 2)),
+]
+
+
+def inv(a):
+    return pow(a, p - 2, p)
+
+
+def rref(mat):
+    A = [[x % p for x in row] for row in mat]
+    m = len(A)
+    n = len(A[0])
+    r = 0
+
+    for c in range(n):
+        pivot = None
+        for i in range(r, m):
+            if A[i][c] != 0:
+                pivot = i
+                break
+
+        if pivot is None:
+            continue
+
+        A[r], A[pivot] = A[pivot], A[r]
+
+        s = inv(A[r][c])
+        A[r] = [(s * x) % p for x in A[r]]
+
+        for i in range(m):
+            if i != r and A[i][c] != 0:
+                f = A[i][c]
+                A[i] = [(A[i][j] - f * A[r][j]) % p for j in range(n)]
+
+        r += 1
+
+        if r == m:
+            break
+
+    return tuple(tuple(row) for row in A if any(row))
+
+
+def rank(mat):
+    return len(rref(mat))
+
+
+def matmul(A, B):
+    return [
+        [
+            sum(A[i][k] * B[k][j] for k in range(len(B))) % p
+            for j in range(len(B[0]))
+        ]
+        for i in range(len(A))
+    ]
+
+
+def line_equations(pairing_index, a, b):
+    """
+    Returns the two linear equations defining the line
+
+        x_i + a x_j = 0,
+        x_k + b x_ell = 0.
+
+    The line is stored by the reduced row echelon form of its equation matrix.
+    """
+    (i, j), (k, ell) = pairings[pairing_index]
+
+    row1 = [0, 0, 0, 0]
+    row2 = [0, 0, 0, 0]
+
+    row1[i] = 1
+    row1[j] = a
+
+    row2[k] = 1
+    row2[ell] = b
+
+    return rref([row1, row2])
+
+
+# Step 1: construct the 27 lines.
+
+lines = []
+line_to_index = {}
+
+for pairing_index in range(3):
+    for a in roots:
+        for b in roots:
+            E = line_equations(pairing_index, a, b)
+            line_to_index[E] = len(lines)
+            lines.append((pairing_index, a, b, E))
+
+print("number of lines =", len(lines))
+
+# Print the numerical ordering of the 27 Fermat lines.
+
+root_label = {
+    1: "1",
+    2: "omega",
+    4: "omega^2",
+}
+
+for index, (pairing_index, a, b, _) in enumerate(lines):
+    print(
+        f"{index:2d} -> "
+        f"L_(pi_{pairing_index};{root_label[a]},{root_label[b]})"
+    )
+
+print("number of lines =", len(lines))
+
+# Step 2: construct the skewness graph.
+#
+# Two lines in P^3 are skew if the four equations defining them have rank 4.
+# Each line is stored as the row space of its two defining linear equations.
+# Two lines in P^3 meet if the combined system of their four linear equations
+# has a nonzero solution.  Equivalently, the rank is at most 3.
+#
+# Therefore two lines are skew exactly when the combined rank is 4.
+
+adjacency = [set() for _ in range(27)]
+edges = []
+
+for i, j in combinations(range(27), 2):
+    Ei = list(lines[i][3])
+    Ej = list(lines[j][3])
+
+    if rank(Ei + Ej) == 4:
+        adjacency[i].add(j)
+        adjacency[j].add(i)
+        edges.append((i, j))
+
+print("number of skew pairs =", len(edges))
+
+
+# Step 3: enumerate sixers as 6-cliques in the skewness graph.
+# A sixer is a set of six pairwise skew lines.
+# Therefore, in the skewness graph, sixers are exactly cliques of size 6.
+# The recursive search below enumerates all 6-cliques without repetitions.
+
+sixers = []
+
+
+def extend_clique(clique, candidates):
+    if len(clique) == 6:
+        sixers.append(tuple(clique))
+        return
+
+    candidates = sorted(candidates)
+
+    for n, v in enumerate(candidates):
+        new_clique = clique + [v]
+        new_candidates = set(candidates[n + 1:]) & adjacency[v]
+        extend_clique(new_clique, new_candidates)
+
+
+extend_clique([], set(range(27)))
+
+print("number of sixers =", len(sixers))
+
+
+# Step 4: construct the action of Aut(S_F).
+#
+# The automorphism group of the Fermat cubic is the group of monomial
+# transformations generated by:
+#
+#   - permutations of the four coordinates;
+#   - diagonal multiplication by third roots of unity,
+#     modulo the scalar diagonal.
+#
+# We fix the first diagonal entry equal to 1, so the number of diagonal
+# choices is 3^3.  Together with the 24 coordinate permutations this gives
+#
+#       3^3 * 24 = 648
+#
+# automorphisms.
+
+automorphisms = []
+
+for perm in permutations(range(4)):
+    for d1, d2, d3 in product(roots, repeat=3):
+        d = (1, d1, d2, d3)
+
+        # Matrix T with y_i = d_i x_{perm[i]}.
+        T = [[0 for _ in range(4)] for _ in range(4)]
+        for i, j in enumerate(perm):
+            T[i][j] = d[i]
+
+        # Inverse of the monomial matrix.
+        Tinv = [[0 for _ in range(4)] for _ in range(4)]
+        for i in range(4):
+            for j in range(4):
+                if T[i][j] != 0:
+                    Tinv[j][i] = inv(T[i][j])
+
+        image = []
+
+        for _, _, _, E in lines:
+            # If the original line is E x = 0 and y = T x,
+            # then the image line is E T^{-1} y = 0.
+            E_image = rref(matmul([list(row) for row in E], Tinv))
+            image.append(line_to_index[E_image])
+
+        automorphisms.append(tuple(image))
+
+automorphisms = list(set(automorphisms))
+
+print("number of automorphisms =", len(automorphisms))
+
+
+# Step 5: compute orbits on the set of sixers.
+
+
+# The automorphism group acts on the set of lines, hence on the set of sixers.
+# The following breadth-first search computes the orbits of this action.
+
+unseen = set(sixers)
+orbits = []
+
+while unseen:
+    start = next(iter(unseen))
+    orbit = set()
+    stack = [start]
+    unseen.remove(start)
+
+    while stack:
+        s = stack.pop()
+        orbit.add(s)
+
+        for g in automorphisms:
+            t = tuple(sorted(g[i] for i in s))
+
+            if t in unseen:
+                unseen.remove(t)
+                stack.append(t)
+
+    orbits.append(orbit)
+
+orbit_sizes = sorted([len(Orb) for Orb in orbits], reverse=True)
+
+print("orbit sizes =", orbit_sizes)
+
+
+# Step 6: print representatives.
+
+orbits = sorted(orbits, key=len, reverse=True)
+
+orbits = sorted(orbits, key=len, reverse=True)
+
+for n, Orb in enumerate(orbits, start=1):
+    print()
+    print(f"Orbit {n} (size {len(Orb)}):")
+    for sixer in sorted(Orb):
+        print(sixer)
