@@ -290,8 +290,6 @@ print("orbit sizes =", orbit_sizes)
 
 orbits = sorted(orbits, key=len, reverse=True)
 
-orbits = sorted(orbits, key=len, reverse=True)
-
 for n, Orb in enumerate(orbits, start=1):
     print()
     print(f"Orbit {n} (size {len(Orb)}):")
