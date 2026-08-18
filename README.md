@@ -23,7 +23,7 @@ A mathematical description of the main computational procedures is given in the 
   Computes the determinants of the pairwise differences of the normalized matrices and provides the data used to determine the images of the determinant square-class character.
 
 - [`fermat_finite_reductions.py`](fermat_finite_reductions.py)  
-  Computes finite reductions of the associated projective matrix groups modulo selected primes and determines the orders of the resulting subgroups of $\operatorname{PGL}_2(\mathbb{F}_p)$.
+  Computes finite reductions of the associated projective matrix groups modulo selected primes and determines the orders of the resulting subgroups of $PGL_2(F_p)$.
 
 - [`fermat_mod13_normalizations.py`](fermat_mod13_normalizations.py)  
   Checks the determinant square-class behavior modulo 13 for all 120 ordered normalization triples of each representative sixer.
