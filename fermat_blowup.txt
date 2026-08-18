@@ -1,0 +1,269 @@
+LIB "primdec.lib"; 
+LIB "linalg.lib";
+LIB "ellipticcovers.lib"; 
+option(redSB);
+proc genMap(list @F){ //ideal of the graph of the anticanonical map P2 -> P3
+  ideal I=std(intersect(@F[1..6]));
+  ideal J=I[1..4];
+  matrix A[2][4]=J[1..4],x,y,z,w;
+  if(system("version")<44100){
+    ideal phi=std(sat(minor(A,2),J)[1]);
+	}
+  else{
+	  ideal phi=std(sat(minor(A,2),J));
+    }
+  return(phi);
+}
+proc imPhi(ideal phi, ideal I){ //image of a subscheme of P2. For I=0 return the image surface
+  ideal J=phi+I;
+  if(system("version")<44100){
+    J=std(eliminate(sat(J,ideal(a,b,c))[1],abc));
+	}
+  else{
+	  J=std(eliminate(sat(J,ideal(a,b,c)),abc));
+    }
+  return(J);
+}
+proc imNaivePhi(list @F, ideal imId){ //image of a plane curve
+  ideal I=std(intersect(@F[1..6]));
+  ideal J=ideal(x-I[1],y-I[2],z-I[3],w-I[4])+imId;
+  J=std(eliminate(J,abc));
+  return(J);
+}
+proc imContrPhi(ideal @I, ideal imId){ //image of a plane curve under the second blow-down map P2 -> P2
+  ideal J=std(eliminate(ideal(x-@I[1],y-@I[2],z-@I[3])+imId,abc));
+  return(substitute(J,ideal(x,y,z),ideal(a,b,c)));
+}
+proc line(list pt){ //generate line
+  ideal I=std(intersect(pt[1..2]));
+  return(I[1]);
+}
+proc conic(list pt, int idx){ //equation of the conic through the five points different from pt[idx]
+  ideal I=1;
+	for(int i=1;i<=size(pt);i++){
+	  if(i<>idx){
+		I=intersect(I,pt[i]);
+	  }
+	}
+  return(std(I)[1]);
+}
+proc idPoint(poly pp, poly qq, poly rr){ //ideal of given point
+  matrix m[2][3]=pp,qq,rr,a,b,c;
+  ideal I=minor(m,2);
+  return(std(I));
+}
+proc eqIdeal(list L1, list L2){ //check if two ideals are equal
+  ideal I=std(ideal(L1[1..size(L1)]));
+  ideal J=std(ideal(L2[1..size(L2)]));
+  if(size(NF(I,J))==0 && size(NF(J,I))==0){
+	return(1);
+  }
+return(0);
+}
+proc combinations(int maxV, int nrPt){ //generates combinations
+  if(nrPt>maxV){
+  	return("n less than k");
+  }
+  for(int i=1;i<=nrPt;i++){
+  	int t(i)=1;
+  }
+  string comm="for(t(1)=1;t(1)<=maxV-nrPt+1;t(1)++){";
+  list AllCmb;
+  for(i=2;i<=nrPt;i++){
+  	comm=comm+"for(t("+string(i)+")=t("+string(i)+"-1)+1;t("+string(i)+")<=maxV-nrPt+"+string(i)+";t("+string(i)+")++){";
+  }
+  comm=comm+"list Cmb; for(i=1;i<=nrPt;i++){Cmb=Cmb+list(t(i));} AllCmb[size(AllCmb)+1]=Cmb; kill Cmb;";
+  for(i=1;i<=nrPt;i++){
+    comm=comm+"}";
+  }
+  execute(comm);
+return(AllCmb);	
+}
+proc Lidx(int i, int j){ //index for L_ij
+  if(i<j){
+	return(10*i+j);
+  }
+return(10*j+i);
+}
+proc isIn(int v, list A){ //checks whether v is in A
+  for(int i=1;i<=size(A);i++){
+    if(v==A[i]){
+      return(1);
+    }
+  }
+return(0);
+}
+proc compl6(list A){ //complement of set in {1,...,6}
+  list B;
+  for(int i=1;i<=6;i++){
+    if(isIn(i,A)==0){
+      B[size(B)+1]=i;
+    }
+  }
+return(B);
+}
+proc genSixers(list E, list L, list Q){ //generate all 72 sixers
+  int i,j,k; list sixers;
+  sixers[1]=E; //type E: E_1,...,E_6
+  sixers[2]=Q; //type Q: Q_1,...,Q_6
+  list comb63=combinations(6,3);
+  for(int s=1;s<=size(comb63);s++){ //type 3E+3L: E_i, E_j, E_k and L_ab
+    list I=comb63[s];
+    list J=compl6(I);
+    list S;
+    S[1]=E[I[1]];
+    S[2]=E[I[2]];
+    S[3]=E[I[3]];
+    S[4]=L[Lidx(J[1],J[2])];
+    S[5]=L[Lidx(J[1],J[3])];
+    S[6]=L[Lidx(J[2],J[3])];
+    sixers[size(sixers)+1]=S;
+    kill S,I,J;
+  }
+  for(s=1;s<=size(comb63);s++) { //type 3L+3Q: L_ab, and Q_i, Q_j, Q_k
+    list I=comb63[s];
+    list J=compl6(I);
+    list S;
+    S[1]=L[Lidx(I[1],I[2])];
+    S[2]=L[Lidx(I[1],I[3])];
+    S[3]=L[Lidx(I[2],I[3])];
+    S[4]=Q[J[1]];
+    S[5]=Q[J[2]];
+    S[6]=Q[J[3]];
+    sixers[size(sixers)+1]=S;
+    kill S,I,J;
+  }
+  for(i=1;i<=6;i++){ //type E+Q+4L: {E_i,Q_i} + {L_kj: j not in {i,k}}
+  	for(k=1;k<=6;k++){
+  	  if (i<>k){
+  	    list S;
+  	    S[1]=E[i];
+  	    S[2]=Q[i];
+  	    int pos=3;
+        for(j=1;j<=6;j++){
+  		  if(j<>i){
+  		    if(j<>k){
+  			  S[pos]=L[Lidx(k,j)];
+  			  pos++;
+  		    }
+  		  }
+        }
+  	  sixers[size(sixers)+1]=S;
+  	  kill S,pos;
+  	  }
+  	}
+  }
+return(sixers);
+}
+proc coordChange(list @L, matrix @m){ //pull back an ideal in P3 by the projective transformation defined by @m
+  matrix @v[4][1]=x,y,z,w;
+  for(int i=1;i<=size(@L[1]);i++){
+	@L[1][i]=std(substitute(@L[1][i],ideal(x,y,z,w),ideal(@m*@v)))[1];
+  }
+return(@L[1]);
+}
+ring R=(0,e),(x,y,z,w,a,b,c),dp;
+minpoly=e2+e+1;
+int i,j;
+list p6; //ideals of 6 points 
+p6[1]=idPoint(1,0,0);
+p6[2]=idPoint(0,1,0);
+p6[3]=idPoint(0,0,1);
+p6[4]=idPoint(1,1,1);
+p6[5]=idPoint(1,e,e2);
+p6[6]=idPoint(1,e2,e);
+
+ideal phi=genMap(p6);
+list E,L,Q,lines;
+ideal cubic=imPhi(phi,0); //cubic equation
+"Original cubic: "+string(cubic);
+for(i=1;i<=6;i++){ //images of points
+  E[i]=imPhi(phi,p6[i]);
+}
+for(i=1;i<=6;i++){ //images of lines
+  for(j=i+1;j<=6;j++){
+    L[int(string(i)+string(j))]=imNaivePhi(p6,line(list(p6[i],p6[j]))); 
+  }
+}
+for(i=1;i<=6;i++){ //images of conics
+  Q[i]=imNaivePhi(p6,conic(p6,i));
+}
+lines=E,L,Q; // lines on cubic in P3
+list sixers=genSixers(E,L,Q); //sixers
+"Number of sixers in the first blow-up model: "+string(size(sixers));
+matrix toFermat[4][4]=0,0,(-1/3e-2/3),(-1/3e-2/3),
+  (1/3e+2/3),(1/3e+2/3),0,0,
+  (-1/3e+1/3),(2/3e+1/3),0,0,
+  0,0,(1/3e-1/3),(-2/3e-1/3);
+list linesContainer; //lines after proj. change of coordinates
+for(i=1;i<=6;i++){
+  linesContainer[size(linesContainer)+1]=list(coordChange(E[i],toFermat),"E"+string(i));
+  linesContainer[size(linesContainer)+1]=list(coordChange(Q[i],toFermat),"Q"+string(i));
+}
+for(i=1;i<=6;i++){
+  for(j=i+1;j<=6;j++){
+	linesContainer[size(linesContainer)+1]=list(coordChange(L[Lidx(i,j)],toFermat),"L"+string(i)+string(j));
+  }
+}
+list FLines; //Fermat lines
+int cnt=1;
+for(i=1;i<=3;i++){
+  for(j=1;j<=3;j++){
+    FLines[cnt]=list(x+e^(i-1)*y,z+e^(j-1)*w);
+    FLines[9+cnt]=list(x+e^(i-1)*z,y+e^(j-1)*w);
+    FLines[18+cnt]=list(x+e^(i-1)*w,y+e^(j-1)*z);
+    cnt++;
+  }
+}
+"disctionary between blow up model and Fermat lines:";
+for(i=1;i<=size(FLines);i++){ //dictionary between Fermat lines and generated lines
+  for(j=1;j<=size(linesContainer);j++){
+	if(eqIdeal(FLines[i],linesContainer[j][1])==1){
+	  "index "+string(i-1)+" is "+linesContainer[j][2];
+	}
+  }
+}
+ideal sections=std(intersect(p6[1]^2,p6[2]^2,p6[6]^2,p6[3],p6[4],p6[5])); //4H−2E1−2E2−E3−E4−E5−2E6 coming from L_{12},L_{16},L_{26},Q_3,Q_4,Q_5
+list newPoints=
+imContrPhi(sections,line(list(p6[1],p6[2]))),
+imContrPhi(sections,line(list(p6[1],p6[6]))),
+imContrPhi(sections,line(list(p6[2],p6[6]))),
+imContrPhi(sections,conic(p6,3)),
+imContrPhi(sections,conic(p6,4)),
+imContrPhi(sections,conic(p6,5));
+"";
+"Generators of ideals of points obtained from the second contraction: ";
+for(i=1;i<=6;i++){
+  "q_"+string(i)+": "+print(newPoints[i],"2%s");
+}
+phi=genMap(newPoints);
+list E2,L2,Q2,lines2;
+ideal cubic2=imPhi(phi,0); //new cubic equation
+"";"Cubic obtained from the new six points: "+string(cubic2);
+for(i=1;i<=6;i++){ //new images of points
+  E2[i]=imPhi(phi,newPoints[i]);
+}
+for(i=1;i<=6;i++){ //new images of lines
+  for(j=i+1;j<=6;j++){
+    L2[int(string(i)+string(j))]=imNaivePhi(newPoints,line(list(newPoints[i],newPoints[j]))); 
+  }
+}
+for(i=1;i<=6;i++){ //new images of conics
+  Q2[i]=imNaivePhi(newPoints,conic(newPoints,i));
+}
+lines2=E2,L2,Q2; //all lines on cubic in P3
+list sixers2=genSixers(E2,L2,Q2); // new sixers
+"Number of sixers in the second blow-up model: "+string(size(sixers2));
+//checks projective equivalence
+matrix oldToNew[4][4]=-e,0,e+1,0,
+-1,e,-e,1,
+-2,-e,-e,1,
+4e+4,1,-2,-2e-2;
+"Projective-equivalence checks (1 means true):";
+"pullback of the <new cubic> equals the <original cubic>: "+string(eqIdeal(coordChange(cubic2,oldToNew),cubic));
+"pullback of E2[1] equals L12: "+string(eqIdeal(coordChange(E2[1],oldToNew),L[12]));
+"pullback of E2[2] equals L16: "+string(eqIdeal(coordChange(E2[2],oldToNew),L[16]));
+"pullback of E2[3] equals L26: "+string(eqIdeal(coordChange(E2[3],oldToNew),L[26]));
+"pullback of E2[4] equals Q3: "+string(eqIdeal(coordChange(E2[4],oldToNew),Q[3]));
+"pullback of E2[5] equals Q4: "+string(eqIdeal(coordChange(E2[5],oldToNew),Q[4]));
+"pullback of E2[6] equals Q5: "+string(eqIdeal(coordChange(E2[6],oldToNew),Q[5]));

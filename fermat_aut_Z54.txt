@@ -1,0 +1,54 @@
+LIB "ellipticcovers.lib";
+LIB "primdec.lib";  
+option(redSB);
+
+ring R2=(0,e),(a(1..9),t(1..6)),dp;
+minpoly=e2+e+1;
+//finds projective automorphisms of Z54 by testing all permutations
+list Z54=
+list(1,0,0),
+list(0,1,0),
+list(0,0,1),
+list(1,1,1),
+list(e+2,1-e,3),
+list(1-e,e+2,3);
+matrix T[3][3];
+list permZ54=permute(Z54);
+list results;
+matrix mConstr[3][1];
+matrix oldCoord[3][1];
+int i,j,k,l;
+"configuration Z54, number of tested permutations: "+string(size(permZ54));
+for(i=1;i<=size(permZ54);i++){
+  ideal constr;
+  T=a(1..9);
+  for(j=1;j<=6;j++){
+  	mConstr=Z54[j][1],Z54[j][2],Z54[j][3];
+  	oldCoord=permZ54[i][j][1],permZ54[i][j][2],permZ54[i][j][3];
+  	constr=constr+ideal(T*mConstr-t(j)*oldCoord); //impose T(P_j)=t_j P_sigma(j)
+  }
+//eliminates the six projective scaling parameters
+constr=elim(constr,t(1)*t(2)*t(3)*t(4)*t(5)*t(6));
+  if(system("version")<44100){//remove the component supported at the zero matrix
+    constr=std(sat(constr,ideal(a(1..9)))[1]);
+	}
+  else{
+	  constr=std(sat(constr,ideal(a(1..9))));
+    }	
+if(NF(1,constr)!=0){//1 does not belong to constr
+  ideal temp;
+  for(l=9;l>=1;l--){
+	temp=std(constr+ideal(a(l)-1)); 
+    if(NF(1,temp)!=0){//choose an affine chart with a(l)=1
+      for(k=1;k<=9;k++){//save matrix
+        T[((k-1) div 3)+1,((k-1) mod 3)+1]=NF(a(k),temp);
+      }
+      results[size(results)+1]=T;
+	  break;
+    }
+  }
+kill temp;
+}
+kill constr;
+}
+"number of projective automorphisms found: "+string(size(results));
