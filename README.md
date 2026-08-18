@@ -1,12 +1,10 @@
 # On the Geometry of Sixers on the Fermat Cubic Surface – computational files
 
 This repository contains supplementary **Python** and **Singular** code for the article:
-
 **Giuseppe Favacchio, Grzegorz Malara**  
 *On the Geometry of Sixers on the Fermat Cubic Surface*
 
 The scripts provide the computational verification of the results concerning sixers on the Fermat cubic surface, their associated groups, and the corresponding plane blow-up models.
-
 A mathematical description of the main computational procedures is given in the appendices of the paper. The source files in this repository contain short comments intended to clarify the main computational steps.
 
 ## Contents
@@ -32,14 +30,14 @@ A mathematical description of the main computational procedures is given in the 
 
 The Singular computations are divided into three scripts:
 
-- [`fermat_blowup.txt`](fermat_blowup.txt)
+- [`fermat_blowup.txt`](fermat_blowup.txt) 
   Constructs the anticanonical blow-up model of the Fermat cubic, identifies the 27 lines in the standard notation
   $E_i$, $L_{ij}$, $Q_i$, generates the 72 sixers, constructs the second plane blow-down model, and verifies the projective equivalence between the two anticanonical models.
 
-- [`fermat_aut_Z18.txt`](fermat_aut_Z18.txt)
+- [`fermat_aut_Z18.txt`](fermat_aut_Z18.txt) 
   Tests all 720 permutations of the six-point configuration $Z_{18}$ and computes its projective automorphisms.
 
-- [`fermat_aut_Z54.txt`](fermat_aut_Z54.txt)
+- [`fermat_aut_Z54.txt`](fermat_aut_Z54.txt) 
   Tests all 720 permutations of the six-point configuration $Z_{54}$ and computes its projective automorphisms.
 
 ## Requirements
@@ -51,14 +49,12 @@ The Python scripts use only standard Python libraries unless stated otherwise in
 ### Singular
 
 The Singular computations were carried out and tested in **Singular 4.4.1**.
-
 Where necessary, the scripts contain separate commands intended to accommodate the output format used by earlier versions of Singular.
 
 
 ## Reference
 
 If you use the code contained in this repository, please cite the following paper:
-
 Giuseppe Favacchio, Grzegorz Malara  
 *On the Geometry of Sixers on the Fermat Cubic Surface*
 
