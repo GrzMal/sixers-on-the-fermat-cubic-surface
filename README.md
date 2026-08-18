@@ -31,7 +31,6 @@ A mathematical description of the main computational procedures is given in the 
 The Singular computations are divided into three scripts:
 
 - [`fermat_blowup.txt`](fermat_blowup.txt)
-  
   Constructs the anticanonical blow-up model of the Fermat cubic, identifies the 27 lines in the standard notation
   $E_i$, $L_{ij}$, $Q_i$, generates the 72 sixers, constructs the second plane blow-down model, and verifies the projective equivalence between the two anticanonical models.
 
